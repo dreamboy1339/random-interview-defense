@@ -37,7 +37,7 @@ def save_cache(file_path, type, id):
 
 class Query:
     def __init__(self):
-        self.question_query_type_table = {"-b": "backend", "-f": "frontend", "-t": "tip"}
+        self.question_query_type_table = {"-b": "backend", "-f": "frontend", "-a": "android", "-t": "tip"}
         self.question_type_command = None if len(sys.argv) <= 1 else sys.argv[1]
         self.question_id = None if len(sys.argv) <= 2 else sys.argv[2]
         self.content = load_json(os.environ['RID_PATH'] + "/db.json")
@@ -46,7 +46,8 @@ class Query:
     def extract_total(self):
         b_exclude = 1 + len(self.content['backend'])
         f_exclude = len(self.content['frontend']) + b_exclude
-        t_exclude = len(self.content['tip']) + f_exclude
+        a_exclude = len(self.content['android']) + f_exclude
+        t_exclude = len(self.content['tip']) + a_exclude
 
         target = random.randrange(1, t_exclude)
 
@@ -55,14 +56,17 @@ class Query:
 
         if target < f_exclude:
             return self.get_quiz("frontend", target - b_exclude + 1)
+        
+        if target < a_exclude:
+            return self.get_quiz("frontend", target - f_exclude + 1)
 
         if target < t_exclude:
-            return self.get_quiz("tip", target - f_exclude + 1)
+            return self.get_quiz("tip", target - a_exclude + 1)
 
         raise Exception("잘못된 수를 추출했습니다.")
 
     def extract_single(self, question_type):
-        quiz_id = random.randrange(1, len(self.content) + 1)
+        quiz_id = random.randrange(1, len(self.content))
 
         return self.get_quiz(question_type, str(quiz_id))
 
@@ -74,7 +78,7 @@ class Query:
         return quiz_id, self.content[question_type][quiz_id]
 
     def dispatcher(self):
-        question_query_type_table = {"-b": "backend", "-f": "frontend", "-t": "tip"}
+        question_query_type_table = {"-b": "backend", "-f": "frontend", "-a": "android", "-t": "tip"}
 
         if self.question_type_command is None:
             return self.extract_total()
@@ -91,13 +95,13 @@ class Query:
         if self.question_type_command == "-c":
             return None, None
 
-        print("rid [type]: 해당 타입의 문제에 대한 질문 요청\n-b: 백엔드 질문  -f: 프론트 엔드 질문  -t: 기타 TIL 팁 정보  -h: 명령어 요청 -c: 카테고리별 컨텐츠 검색"
+        print("rid [type]: 해당 타입의 문제에 대한 질문 요청\n-b: 백엔드 질문  -f: 프론트 엔드 질문 -a: 안드로이드 질문  -t: 기타 TIL 팁 정보  -h: 명령어 요청 -c: 카테고리별 컨텐츠 검색"
               "\nex) "
               "rid -b\nrid [type] [number]: 해당 문제에 대한 답변 요청\nex) rid -f 5")
         exit()
 
     def category_target_factory(self, question_type):
-        if question_type in ["backend", "frontend"]:
+        if question_type in ["backend", "frontend", "android"]:
             return "quiz"
 
         else:
@@ -106,7 +110,7 @@ class Query:
     # 매번 전역에 카테고리를 올리는 것은 비효율적이므로 필요할 때만 검색하도록 호출하는 방식
     def get_categories(self):
         keyword = self.question_id
-        quiz_type_list = ["backend", "frontend", "tip"]
+        quiz_type_list = ["backend", "frontend", "android", "tip"]
         output = ""
 
         for question_type in quiz_type_list:
